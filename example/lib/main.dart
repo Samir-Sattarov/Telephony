@@ -26,6 +26,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   onMessage(SmsMessage message) async {
+    print("Message $message");
     setState(() {
       _message = message.body ?? "Error reading message body.";
     });
