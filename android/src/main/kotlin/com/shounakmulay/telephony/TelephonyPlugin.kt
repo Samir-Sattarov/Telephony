@@ -23,11 +23,14 @@ class TelephonyPlugin : FlutterPlugin, ActivityAware {
 
   private lateinit var binaryMessenger: BinaryMessenger
 
+  private lateinit var permissionsController: PermissionsController
+
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    val isInForeground = IncomingSmsHandler.isApplicationForeground(flutterPluginBinding.applicationContext);
-    if (!this::binaryMessenger.isInitialized && isInForeground) {
+    if (!this::binaryMessenger.isInitialized) {
       binaryMessenger = flutterPluginBinding.binaryMessenger
     }
+
+    setupPlugin(flutterPluginBinding.applicationContext, binaryMessenger)
   }
 
   override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
@@ -43,8 +46,8 @@ class TelephonyPlugin : FlutterPlugin, ActivityAware {
   }
 
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-    setupPlugin(binding.activity.applicationContext, binaryMessenger)
-    PermissionsController.setActivity(binding.activity)
+    IncomingSmsReceiver.foregroundSmsChannel = smsChannel
+    smsMethodCallHandler.setActivity(binding.activity)
     binding.addRequestPermissionsResultListener(smsMethodCallHandler)
   }
 
@@ -54,13 +57,12 @@ class TelephonyPlugin : FlutterPlugin, ActivityAware {
 
   private fun setupPlugin(context: Context, messenger: BinaryMessenger) {
     smsController = SmsController(context)
-    smsMethodCallHandler = SmsMethodCallHandler(context, smsController)
+    permissionsController = PermissionsController(context)
+    smsMethodCallHandler = SmsMethodCallHandler(context, smsController, permissionsController)
 
     smsChannel = MethodChannel(messenger, CHANNEL_SMS)
     smsChannel.setMethodCallHandler(smsMethodCallHandler)
     smsMethodCallHandler.setForegroundChannel(smsChannel)
-
-    IncomingSmsReceiver.foregroundSmsChannel = smsChannel
   }
 
   private fun tearDownPlugin() {
